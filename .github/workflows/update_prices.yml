@@ -1,0 +1,54 @@
+name: Update prices.json (TQQQ/QLD)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 22 * * *"  # UTC 22:10 (KST 07:10)
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch closes and write prices.json
+        run: |
+          python - <<'PY'
+          import csv, json, urllib.request
+
+          def stooq_close(sym: str):
+            url = f"https://stooq.com/q/d/l/?s={sym}&i=d"
+            with urllib.request.urlopen(url, timeout=30) as r:
+              text = r.read().decode("utf-8", errors="replace").strip().splitlines()
+            rows = list(csv.DictReader(text))
+            last = rows[-1]
+            return last["Date"], float(last["Close"])
+
+          d1, tqqq = stooq_close("tqqq.us")
+          d2, qld  = stooq_close("qld.us")
+          asof = max(d1, d2)
+
+          out = {
+            "asof": asof,
+            "source": "stooq",
+            "TQQQ": {"close": tqqq},
+            "QLD":  {"close": qld},
+          }
+
+          with open("prices.json", "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+
+          print(out)
+          PY
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Update prices.json"
+          git push
