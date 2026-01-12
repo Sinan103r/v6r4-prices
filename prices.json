@@ -1,10 +1,10 @@
 {
-  "asof": "2026-01-09",
+  "asof": "2026-01-12",
   "source": "stooq",
   "TQQQ": {
-    "close": 55.76
+    "close": 55.89
   },
   "QLD": {
-    "close": 73.14
+    "close": 73.26
   }
 }
